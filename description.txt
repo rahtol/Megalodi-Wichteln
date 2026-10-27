@@ -1,0 +1,51 @@
+Ich möchte eine Web-Applikation erstellen, die in einer Gruppe von 3-20 Personen jeder Person anonym genau einen Partner zuordnet. Hintergrund: Wichteln zu Weihnachten.
+Jede Person soll genau einen Partner bekommen und soll der Partner genau einer (im allgemein vom eignenen zugeteilten Partner verschiedenen) Person sein.
+Man kann nicht sein eigener Partner sein. Jeder kennt nur seinen Partner, alle weiteren Zuordnungen sind in der Applikation verborgen.
+
+Die Webapplikation soll Client/Server Architektur haben.
+
+Der HTTPS-Server
+- führt eine Liste der Personen die sich dynamisch anmelden
+- jeder Client entspricht 1:1 einer Person
+- läuft auf einer Synology NAS 
+- die Base-Url versorgt jeden neuen Client mit der Client-Applikation
+- stellt neben der HTTPS-Schnittstelle eine Websocket-Schnittstelle zur Kommunikation mit den Clients(=Personen) bereit
+- jeder Client der sich über die Websocket-Schnittstelle mit dem eigegebenen Namen anmeldet wird in die Liste der Personen aufgenommen.
+- versorgt alle Clients über die Websocket-Schnittstelle zyklisch mit Daten (Liste der Personen mit Start-Zustand, zugeteilter Partner soblad vorhanden, Name des Clients)
+- bricht die Websocket-Verbindung ab, wird der Client aus der Liste gestrichen
+- Sobald alle Client die Start-Zustand gleichzeitig für 2 Sekunden angenommen haben wird die Zuordnung vom Server erstellt
+- Mit dem nächsten zyklischen Websocket-Telegramm erfährt jede Person ihren Partner
+- Der Server erstellt an jeden Teilnehmer mit E-Mail-Adresse eine Mail mit Betreff: "Megalodi-Wichteln am <Datum/Uhrzeit> und dem Text: "Du überraschst <Name des zugeordneten Partners>
+- Der Server erstellt eine interne Log-Datei mit der vorgnommenen Zuordnung und Datum/Uhrzeit
+- Nach 5 Sekunden oder 5 Wiederholungen des Websocket-Telegramms mit Partner bricht der Server die Verbindung ab und der Vorgang ist beendet
+
+Der Client
+- wird von jeder Person durch Aufruf der Server-Base-Url mit einem Browser gestartet
+- soll eine VUE3 Applikation sein
+- Fordert zunächst die Eingabe eines Namens und optional einer E-Mail
+- Nimmt danach die Websocket Verbindung auf
+- Zeigt einen Screen mit Titel "Megalodi-Wichteln" und folgenden Daten: 
+   (1) der eigene Name 
+   (2) einen Start-Button 
+   (3) Die Liste der weiteren angemeldeten Namen (=Personen) 
+   (4) vor jedem Namen eine Status-Anzeige, ob die betreffende Person der Start-Button gedrückt hat
+- Sobald die Person der Meinung ist, das die Teilnehmerlist komplett ist drückt und hält sie den Start-Button
+- Das Drücken des Start-Buttons wird den anderen Teilnehmer in der Statusanzeigt gezeigt
+- Das Zurücknehmen des Start-Zustandes ist jederzeit durch Loslassen der Start-Buttons möglich
+- Zu Testzwecken gibt es eine (geheime) Tastenkombination (CTRL+SHIFT+G) die den Start-Button toggelt
+- Sobald die Zuordnung erfolgt ist, wechselt der Screen und statt der Liste wird nur der hervorgehobene Name der zugeordnete Partners angezeit
+
+Die Kommunikation über den Websocket erfolge zyklisch jede Sekunde in beide Richtungen.
+Je Richtung gibt es ein festgelegtes JSON-Format das sekündlich übertragen wrid.
+
+Der Server sendet an jeden Client einmal in der Sekunde folgende Daten:
+- ein eindeutige interne ID also z.B. die laufende Nummer des Websocket-Clients
+- den vom jeweiligen Client eingegeben Namen 
+- die Liste aller zur Zeit verbundenen Client-Namen mit dem jeweilgen Status des Start-Buttons
+- den Namen des dem Client zugeordneten Partners, falls schon vorhanden, sonst leer
+
+Der Client sendet an den Server einmal in der Sekunde folgeden Daten
+- den eigenen Namen wie eingegeben
+- die optionale E-Mail-Adresse, sonst leer
+- den Start-Status des Clients (on/off)
+

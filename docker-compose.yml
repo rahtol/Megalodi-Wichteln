@@ -1,0 +1,11 @@
+services:
+  wichteln:
+    build: .
+    container_name: megalodi-wichteln
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "3017:3000"
+    volumes:
+      - ./data:/data/logs
